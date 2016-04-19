@@ -78,6 +78,6 @@ class Resque_Log extends Psr\Log\AbstractLogger
 		}
 
 		// interpolate replacement values into the message and return
-		return strtr($message, $replace);
+		return str_replace(array_keys($replace), array_values($replace), $message);
 	}
 }
