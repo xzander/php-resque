@@ -10,9 +10,9 @@
 class Resque_Worker
 {
 	/**
-	* @var LoggerInterface Logging object that impliments the PSR-3 LoggerInterface
+	* @var Resque_Log
 	*/
-	public $logger;
+	private $logger;
 
 	/**
 	 * @var array Array of all associated queues for this worker.
@@ -63,7 +63,7 @@ class Resque_Worker
     public function __construct($queues)
     {
         $this->logger = new Resque_Log();
-        
+
         if(!is_array($queues)) {
             $queues = array($queues);
         }
@@ -328,7 +328,7 @@ class Resque_Worker
 	{
 		$processTitle = 'resque-' . Resque::VERSION . ': ' . $status;
 		if(function_exists('cli_set_process_title')) {
-			cli_set_process_title($processTitle);
+			@cli_set_process_title($processTitle);
 		}
 		else if(function_exists('setproctitle')) {
 			setproctitle($processTitle);
@@ -561,6 +561,6 @@ class Resque_Worker
 	 */
 	public function setLogger(Psr\Log\LoggerInterface $logger)
 	{
-		$this->logger = $logger;
+		$this->logger->setLogger($logger);
 	}
 }

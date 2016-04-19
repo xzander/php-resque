@@ -8,7 +8,7 @@
  */
 class Resque
 {
-	const VERSION = '1.2';
+	const VERSION = '1.4';
 
     const DEFAULT_INTERVAL = 5;
 
@@ -277,12 +277,12 @@ class Resque
 		$originalQueue = 'queue:'. $queue;
 		$tempQueue = $originalQueue. ':temp:'. time();
 		$requeueQueue = $tempQueue. ':requeue';
-		
+
 		// move each item from original queue to temp queue and process it
 		$finished = false;
 		while (!$finished) {
 			$string = self::redis()->rpoplpush($originalQueue, self::redis()->getPrefix() . $tempQueue);
-	
+
 			if (!empty($string)) {
 				if(self::matchItem($string, $items)) {
 					self::redis()->rpop($tempQueue);
@@ -307,7 +307,7 @@ class Resque
 		// remove temp queue and requeue queue
 		self::redis()->del($requeueQueue);
 		self::redis()->del($tempQueue);
-		
+
 		return $counter;
 	}
 
