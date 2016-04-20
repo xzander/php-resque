@@ -1,4 +1,5 @@
 <?php
+use Psr\Log\LoggerInterface;
 /**
  * Wrap Credis to add namespace support and various helper methods.
  *
@@ -92,6 +93,14 @@ class Resque_Redis
 	// mset
 	// renamenx
 
+	private $driver;
+
+	/**
+	 *
+	 * @var LoggerInterface
+	 */
+	private $logger;
+
 	/**
 	 * Set Redis namespace (prefix) default: resque
 	 * @param string $namespace
@@ -111,6 +120,7 @@ class Resque_Redis
 	 */
     public function __construct($server, $database = null)
 	{
+    	$this->logger = false;
 		if (is_array($server)) {
 			$this->driver = new Credis_Cluster($server);
 		}
@@ -138,6 +148,14 @@ class Resque_Redis
 		if ($database !== null) {
 			$this->driver->select($database);
 		}
+	}
+
+	/**
+	 *
+	 * @param LoggerInterface $logger
+	 */
+	public function setLogger($logger) {
+		$this->logger = $logger;
 	}
 
 	/**
@@ -228,6 +246,9 @@ class Resque_Redis
 			return $this->driver->__call($name, $args);
 		}
 		catch (CredisException $e) {
+			if ($this->logger) {
+				$this->logger->critical("Could not call redis command [$name]: ".$e->getTraceAsString());
+			}
 			return false;
 		}
 	}
