@@ -159,7 +159,7 @@ class Resque_Worker
 			$job = false;
 			if(!$this->paused) {
 				if($blocking === true) {
-					$this->logger->log(Psr\Log\LogLevel::INFO, 'Starting blocking with timeout of {interval}', array('interval' => $interval));
+					$this->logger->log(Psr\Log\LogLevel::DEBUG, 'Starting blocking with timeout of {interval}', array('interval' => $interval));
 					$this->updateProcLine('Waiting for ' . implode(',', $this->queues) . ' with blocking timeout ' . $interval);
 				} else {
 					$this->updateProcLine('Waiting for ' . implode(',', $this->queues) . ' with interval ' . $interval);
@@ -177,7 +177,7 @@ class Resque_Worker
 				if($blocking === false)
 				{
 					// If no job was found, we sleep for $interval before continuing and checking again
-					$this->logger->log(Psr\Log\LogLevel::INFO, 'Sleeping for {interval}', array('interval' => $interval));
+					$this->logger->log(Psr\Log\LogLevel::DEBUG, 'Sleeping for {interval}', array('interval' => $interval));
 					if($this->paused) {
 						$this->updateProcLine('Paused');
 					}
@@ -272,7 +272,7 @@ class Resque_Worker
 			}
 		} else {
 			foreach($queues as $queue) {
-				$this->logger->log(Psr\Log\LogLevel::INFO, 'Checking {queue} for jobs', array('queue' => $queue));
+				$this->logger->log(Psr\Log\LogLevel::DEBUG, 'Checking {queue} for jobs', array('queue' => $queue));
 				$job = Resque_Job::reserve($queue);
 				if($job) {
 					$this->logger->log(Psr\Log\LogLevel::INFO, 'Found job on {queue}', array('queue' => $job->queue));
@@ -409,6 +409,8 @@ class Resque_Worker
 			return;
 		}
 
+		$output = array();
+		$returnCode = 1;
 		$this->logger->log(Psr\Log\LogLevel::INFO, 'Killing child at {child}', array('child' => $this->child));
 		if(exec('ps -o pid,state -p ' . $this->child, $output, $returnCode) && $returnCode != 1) {
 			$this->logger->log(Psr\Log\LogLevel::DEBUG, 'Child {child} found, killing.', array('child' => $this->child));
@@ -454,6 +456,7 @@ class Resque_Worker
 	public function workerPids()
 	{
 		$pids = array();
+		$cmdOutput = array();
 		exec('ps -A -o pid,command | grep [r]esque', $cmdOutput);
 		foreach($cmdOutput as $line) {
 			list($pids[],) = explode(' ', trim($line), 2);
