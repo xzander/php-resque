@@ -66,14 +66,22 @@ class Resque
             return self::$redis;
         }
 
+        if (!empty(self::$redisOptions['replication']) && empty(self::$redisOptions['parameters']['database']) && self::$redisDatabase) {
+            self::$redisOptions['parameters']['database'] = self::$redisDatabase;
+        }
+
         if (is_callable(self::$redisServer)) {
-            $redis = call_user_func(self::$redisServer, self::$redisOptions, self::$redisDatabase);
+            $redis = call_user_func(self::$redisServer, self::$redisOptions);
             if (!$redis instanceof Client) {
                 throw new \InvalidArgumentException('Callable doesn\'t return instance of Predis\Client');
             }
             self::$redis = $redis;
         } else {
-            self::$redis = new Client(self::$redisServer, self::$redisOptions, self::$redisDatabase);
+            self::$redis = new Client(self::$redisServer, self::$redisOptions);
+        }
+
+        if (empty(self::$redisOptions['replication']) && self::$redisDatabase) {
+            self::$redis->select(self::$redisDatabase);
         }
 
         return self::$redis;
