@@ -1,7 +1,9 @@
 <?php
 use Psr\Log\LoggerInterface;
+use Predis\Client;
+
 /**
- * Wrap Credis to add namespace support and various helper methods.
+ * Wrap Predis to add namespace support and various helper methods.
  *
  * @package		Resque/Redis
  * @author		Chris Boulton <chris@bigcommerce.com>
@@ -13,7 +15,7 @@ class Resque_Redis
 	 * Redis namespace
 	 * @var string
 	 */
-	private static $defaultNamespace = 'resque:';
+	private static $defaultPrefix = 'resque:';
 
 	/**
 	 * A default host to connect to
@@ -38,6 +40,8 @@ class Resque_Redis
 	 */
 	private $logger;
 
+	private $prefix;
+
 	/**
 	 * Set Redis namespace (prefix) default: resque
 	 * @param string $namespace
@@ -47,40 +51,37 @@ class Resque_Redis
 	    if (substr($namespace, -1) !== ':') {
 	        $namespace .= ':';
 	    }
-	    self::$defaultNamespace = $namespace;
+	    self::$defaultPrefix = $namespace;
 	}
 
 	/**
 	 * @param string|array $server A DSN or array
+	 * @param array $options Options for Predis client for replication or other features
 	 * @param int $database A database number to select. However, if we find a valid database number in the DSN the
 	 *                      DSN-supplied value will be used instead and this parameter is ignored.
 	 */
-    public function __construct($server, $database = null)
+    public function __construct($server, $options = [], $database = null)
 	{
-    	$this->logger = false;
-		if (is_array($server)) {
-			$this->driver = new Credis_Cluster($server);
+		if (!isset($options['prefix'])) {
+			$options['prefix'] = self::$defaultPrefix;
 		}
-		else {
 
-			list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
-			// $user is not used, only $password
+		$this->logger = false;
 
-			// Look for known Credis_Client options
-			$timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
-			$persistent = isset($options['persistent']) ? $options['persistent'] : '';
-
-			$this->driver = new Credis_Client($host, $port, $timeout, $persistent);
-			if ($password){
-				$this->driver->auth($password);
-			}
+		if (is_array($server)) {
+			$this->driver = new Client($server, $options);
+		} else {
+			$args = self::parseDsn($server);
+			self::$redis = new Client($args, $options);
 
 			// If we have found a database in our DSN, use it instead of the `$database`
 			// value passed into the constructor.
-			if ($dsnDatabase !== false) {
-				$database = $dsnDatabase;
+			if ($args['database'] !== false) {
+				$database = $args['database'];
 			}
 		}
+
+		$this->prefix = $options['prefix'];
 
 		if ($database !== null) {
 			$this->driver->select($database);
@@ -165,20 +166,10 @@ class Resque_Redis
 	 */
 	public function __call($name, $args)
 	{
-		if (in_array($name, $this->keyCommands)) {
-			if (is_array($args[0])) {
-				foreach ($args[0] AS $i => $v) {
-					$args[0][$i] = self::$defaultNamespace . $v;
-				}
-			}
-			else {
-				$args[0] = self::$defaultNamespace . $args[0];
-			}
-		}
 		try {
 			return $this->driver->__call($name, $args);
 		}
-		catch (CredisException $e) {
+		catch (\Predis\PredisException $e) {
 			if ($this->logger) {
 				$this->logger->critical("Could not call redis command [$name]: ".$e->getTraceAsString());
 			}
@@ -186,18 +177,8 @@ class Resque_Redis
 		}
 	}
 
-	public static function getPrefix()
+	public function getPrefix()
 	{
-	    return self::$defaultNamespace;
-	}
-
-	public static function removePrefix($string)
-	{
-	    $prefix=self::getPrefix();
-
-	    if (substr($string, 0, strlen($prefix)) == $prefix) {
-	        $string = substr($string, strlen($prefix), strlen($string) );
-	    }
-	    return $string;
+		return $this->prefix;
 	}
 }
