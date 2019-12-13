@@ -18,8 +18,8 @@
 	"require" : {
 		"php" : ">=5.3.0",
 		"ext-pcntl" : "*",
-		"predis/predis": "^1.0",
-		"psr/log" : "1.0.0"
+		"predis/predis": "^1.0.0",
+		"psr/log" : "^1.0.1"
 	},
 	"suggest" : {
 		"ext-proctitle" : "Allows php-resque to rename the title of UNIX processes to show the status of a worker."
